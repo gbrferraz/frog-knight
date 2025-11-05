@@ -25,7 +25,7 @@ Entity :: struct {
 EntityType :: enum {
 	Wall,
 	Box,
-	Enemy,
+	Grass,
 }
 
 State :: struct {
@@ -38,6 +38,7 @@ Editor :: struct {
 	current_entity: EntityType,
 	preview_pos:    Vector3,
 	cursor_busy:    bool,
+	y_layer:        int,
 }
 
 Game :: struct {
@@ -49,6 +50,7 @@ Game :: struct {
 	player_model: rl.Model,
 	box_model:    rl.Model,
 	wall_model:   rl.Model,
+	grass_model:  rl.Model,
 }
 
 main :: proc() {
@@ -65,6 +67,7 @@ main :: proc() {
 		player_model = rl.LoadModel("../res/models/player.glb"),
 		box_model = rl.LoadModel("../res/models/box.glb"),
 		wall_model = rl.LoadModel("../res/models/wall.glb"),
+		grass_model = rl.LoadModel("../res/models/grass.glb"),
 	}
 
 	animation_frame: i32
@@ -80,6 +83,7 @@ main :: proc() {
 	rl.SetMaterialTexture(&game.box_model.materials[1], .ALBEDO, material_texture)
 	rl.SetMaterialTexture(&game.wall_model.materials[1], .ALBEDO, material_texture)
 	rl.SetMaterialTexture(&game.player_model.materials[1], .ALBEDO, material_texture)
+	rl.SetMaterialTexture(&game.grass_model.materials[1], .ALBEDO, material_texture)
 
 	box := Entity {
 		pos         = {2, 0, 2},
@@ -253,6 +257,12 @@ update_game :: proc(using game: ^Game, dt: f32) {
 update_editor :: proc(using game: ^Game) {
 	editor.cursor_busy = false
 
+	if rl.GetMouseWheelMove() > 0 {
+		editor.y_layer += 1
+	} else if rl.GetMouseWheelMove() < 0 {
+		editor.y_layer -= 1
+	}
+
 	for type, i in EntityType {
 		rec := get_editor_button_rec(i)
 		if rl.CheckCollisionPointRec(rl.GetMousePosition(), rec) {
@@ -264,10 +274,10 @@ update_editor :: proc(using game: ^Game) {
 
 	collision := rl.GetRayCollisionQuad(
 		ray,
-		{-500, 0, -500},
-		{500, 0, -500},
-		{500, 0, 500},
-		{-500, 0, 500},
+		{-500, f32(editor.y_layer), -500},
+		{500, f32(editor.y_layer), -500},
+		{500, f32(editor.y_layer), 500},
+		{-500, f32(editor.y_layer), 500},
 	)
 
 	if rl.IsKeyPressed(.ONE) {
@@ -277,15 +287,19 @@ update_editor :: proc(using game: ^Game) {
 	}
 
 	if collision.hit {
-		editor.preview_pos = {math.round(collision.point.x), 0, math.round(collision.point.z)}
+		editor.preview_pos = {
+			math.round(collision.point.x),
+			f32(editor.y_layer),
+			math.round(collision.point.z),
+		}
 	}
 
 	hovered_entity, entity_index := get_entity_at_pos(editor.preview_pos, game)
 
 	if rl.IsMouseButtonDown(.LEFT) && hovered_entity == nil && !editor.cursor_busy {
 		new_entity := Entity {
-			pos        = {editor.preview_pos.x, 0, editor.preview_pos.z},
-			target_pos = {editor.preview_pos.x, 0, editor.preview_pos.z},
+			pos        = {editor.preview_pos.x, f32(editor.y_layer), editor.preview_pos.z},
+			target_pos = {editor.preview_pos.x, f32(editor.y_layer), editor.preview_pos.z},
 		}
 
 		switch editor.current_entity {
@@ -297,9 +311,9 @@ update_editor :: proc(using game: ^Game) {
 			new_entity.is_solid = true
 			new_entity.is_pushable = true
 			new_entity.model = &game.box_model
-		case .Enemy:
+		case .Grass:
 			new_entity.is_solid = true
-			new_entity.model = &game.wall_model
+			new_entity.model = &game.grass_model
 		}
 
 		append(&game.entities, new_entity)
