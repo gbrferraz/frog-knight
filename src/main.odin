@@ -42,11 +42,15 @@ Editor :: struct {
 }
 
 Game :: struct {
-	editor:       Editor,
-	player:       Entity,
-	camera:       rl.Camera,
-	entities:     [dynamic]Entity,
-	history:      [dynamic]State,
+	editor:   Editor,
+	player:   Entity,
+	camera:   rl.Camera,
+	entities: [dynamic]Entity,
+	history:  [dynamic]State,
+	assets:   Assets,
+}
+
+Assets :: struct {
 	player_model: rl.Model,
 	box_model:    rl.Model,
 	wall_model:   rl.Model,
@@ -64,10 +68,12 @@ main :: proc() {
 
 	game := Game {
 		camera = {up = {0, 1, 0}, fovy = 45, projection = .PERSPECTIVE},
-		player_model = rl.LoadModel("../res/models/player.glb"),
-		box_model = rl.LoadModel("../res/models/box.glb"),
-		wall_model = rl.LoadModel("../res/models/wall.glb"),
-		grass_model = rl.LoadModel("../res/models/grass.glb"),
+		assets = {
+			player_model = rl.LoadModel("../res/models/player.glb"),
+			box_model = rl.LoadModel("../res/models/box.glb"),
+			wall_model = rl.LoadModel("../res/models/wall.glb"),
+			grass_model = rl.LoadModel("../res/models/grass.glb"),
+		},
 	}
 
 	animation_frame: i32
@@ -80,23 +86,23 @@ main :: proc() {
 
 	rl.SetTextureFilter(material_texture, .BILINEAR)
 
-	rl.SetMaterialTexture(&game.box_model.materials[1], .ALBEDO, material_texture)
-	rl.SetMaterialTexture(&game.wall_model.materials[1], .ALBEDO, material_texture)
-	rl.SetMaterialTexture(&game.player_model.materials[1], .ALBEDO, material_texture)
-	rl.SetMaterialTexture(&game.grass_model.materials[1], .ALBEDO, material_texture)
+	rl.SetMaterialTexture(&game.assets.box_model.materials[1], .ALBEDO, material_texture)
+	rl.SetMaterialTexture(&game.assets.wall_model.materials[1], .ALBEDO, material_texture)
+	rl.SetMaterialTexture(&game.assets.player_model.materials[1], .ALBEDO, material_texture)
+	rl.SetMaterialTexture(&game.assets.grass_model.materials[1], .ALBEDO, material_texture)
 
 	box := Entity {
 		pos         = {2, 0, 2},
 		is_solid    = true,
 		is_pushable = true,
-		model       = &game.box_model,
+		model       = &game.assets.box_model,
 	}
 
 	wall := Entity {
 		pos         = {1, 0, 2},
 		is_solid    = true,
 		is_pushable = false,
-		model       = &game.wall_model,
+		model       = &game.assets.wall_model,
 	}
 
 	append(&game.entities, box)
@@ -122,13 +128,14 @@ main :: proc() {
 		if animation_frame >= player_animations[0].frameCount {
 			animation_frame = 0
 		}
-		rl.UpdateModelAnimation(game.player_model, player_animations[0], animation_frame)
+
+		rl.UpdateModelAnimation(game.assets.player_model, player_animations[0], animation_frame)
 
 		rl.BeginDrawing()
 		rl.ClearBackground(rl.RAYWHITE)
 		rl.BeginMode3D(game.camera)
 		rl.DrawModelEx(
-			game.player_model,
+			game.assets.player_model,
 			game.player.pos,
 			{0, 1, 0},
 			game.player.rotation,
@@ -306,14 +313,14 @@ update_editor :: proc(using game: ^Game) {
 		case .Wall:
 			new_entity.is_solid = true
 			new_entity.is_pushable = false
-			new_entity.model = &game.wall_model
+			new_entity.model = &game.assets.wall_model
 		case .Box:
 			new_entity.is_solid = true
 			new_entity.is_pushable = true
-			new_entity.model = &game.box_model
+			new_entity.model = &game.assets.box_model
 		case .Grass:
 			new_entity.is_solid = true
-			new_entity.model = &game.grass_model
+			new_entity.model = &game.assets.grass_model
 		}
 
 		append(&game.entities, new_entity)
