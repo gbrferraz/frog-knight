@@ -19,7 +19,7 @@ Entity :: struct {
 	is_moving:       bool,
 	is_solid:        bool,
 	is_pushable:     bool,
-	model:           ^rl.Model,
+	type:            EntityType,
 }
 
 EntityType :: enum {
@@ -95,14 +95,14 @@ main :: proc() {
 		pos         = {2, 0, 2},
 		is_solid    = true,
 		is_pushable = true,
-		model       = &game.assets.box_model,
+		type        = .Box,
 	}
 
 	wall := Entity {
 		pos         = {1, 0, 2},
 		is_solid    = true,
 		is_pushable = false,
-		model       = &game.assets.wall_model,
+		type        = .Wall,
 	}
 
 	append(&game.entities, box)
@@ -144,7 +144,8 @@ main :: proc() {
 		)
 
 		for entity in game.entities {
-			rl.DrawModel(entity.model^, entity.pos, 1, rl.WHITE)
+			entity_model := get_entity_model(entity.type, &game)
+			rl.DrawModel(entity_model^, entity.pos, 1, rl.WHITE)
 		}
 
 		if game.editor.active {
@@ -309,19 +310,19 @@ update_editor :: proc(using game: ^Game) {
 			target_pos = {editor.preview_pos.x, f32(editor.y_layer), editor.preview_pos.z},
 		}
 
-		switch editor.current_entity {
+		new_entity.type = editor.current_entity
+
+		switch new_entity.type {
 		case .Wall:
 			new_entity.is_solid = true
 			new_entity.is_pushable = false
-			new_entity.model = &game.assets.wall_model
 		case .Box:
 			new_entity.is_solid = true
 			new_entity.is_pushable = true
-			new_entity.model = &game.assets.box_model
 		case .Grass:
 			new_entity.is_solid = true
-			new_entity.model = &game.assets.grass_model
 		}
+
 
 		append(&game.entities, new_entity)
 	}
@@ -371,4 +372,17 @@ get_entity_at_pos :: proc(pos: [3]f32, using game: ^Game) -> (entity: ^Entity, i
 	}
 
 	return nil, -1
+}
+
+get_entity_model :: proc(type: EntityType, using game: ^Game) -> ^rl.Model {
+	switch type {
+	case .Wall:
+		return &assets.wall_model
+	case .Box:
+		return &assets.box_model
+	case .Grass:
+		return &assets.grass_model
+	}
+
+	return nil
 }
