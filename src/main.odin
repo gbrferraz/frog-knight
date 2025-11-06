@@ -29,6 +29,7 @@ EntityType :: enum {
 	Wall,
 	Box,
 	Grass,
+	Enemy,
 }
 
 State :: struct {
@@ -58,6 +59,7 @@ Assets :: struct {
 	box_model:    rl.Model,
 	wall_model:   rl.Model,
 	grass_model:  rl.Model,
+	enemy_model:  rl.Model,
 }
 
 main :: proc() {
@@ -76,6 +78,7 @@ main :: proc() {
 			box_model = rl.LoadModel("../res/models/box.glb"),
 			wall_model = rl.LoadModel("../res/models/wall.glb"),
 			grass_model = rl.LoadModel("../res/models/grass.glb"),
+			enemy_model = rl.LoadModel("../res/models/enemy.glb"),
 		},
 	}
 
@@ -83,7 +86,6 @@ main :: proc() {
 
 	animation_count: i32
 	player_animations := rl.LoadModelAnimations("../res/models/player.glb", &animation_count)
-
 
 	material_texture := rl.LoadTexture("../res/resurrect-64.png")
 
@@ -94,22 +96,9 @@ main :: proc() {
 	rl.SetMaterialTexture(&game.assets.player_model.materials[1], .ALBEDO, material_texture)
 	rl.SetMaterialTexture(&game.assets.grass_model.materials[1], .ALBEDO, material_texture)
 
-	box := Entity {
-		pos         = {2, 0, 2},
-		is_solid    = true,
-		is_pushable = true,
-		type        = .Box,
+	if os.exists("world.json") {
+		load_game_from_file(&game, "world.json")
 	}
-
-	wall := Entity {
-		pos         = {1, 0, 2},
-		is_solid    = true,
-		is_pushable = false,
-		type        = .Wall,
-	}
-
-	append(&game.entities, box)
-	append(&game.entities, wall)
 
 	for &entity in game.entities {
 		entity.target_pos = entity.pos
@@ -249,11 +238,12 @@ move_player :: proc(using game: ^Game) {
 		if collided_entity != nil {
 			if collided_entity.is_pushable {
 				next_entity_pos := collided_entity.pos + move_direction
-				if next_entity, _ := get_entity_at_pos(next_entity_pos, game); next_entity != nil {
+				if next_entity, _ := get_entity_at_pos(next_entity_pos, game);
+				   next_entity != nil && next_entity.is_solid {
 					return
 				}
 				collided_entity.target_pos += move_direction
-			} else {
+			} else if collided_entity.is_solid {
 				return
 			}
 		}
@@ -333,6 +323,7 @@ update_editor :: proc(using game: ^Game) {
 			new_entity.is_pushable = true
 		case .Grass:
 			new_entity.is_solid = true
+		case .Enemy:
 		}
 
 
@@ -394,6 +385,8 @@ get_entity_model :: proc(type: EntityType, using game: ^Game) -> ^rl.Model {
 		return &assets.box_model
 	case .Grass:
 		return &assets.grass_model
+	case .Enemy:
+		return &assets.enemy_model
 	}
 
 	return nil
