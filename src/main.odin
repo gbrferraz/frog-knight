@@ -32,6 +32,11 @@ EntityType :: enum {
 	Enemy,
 }
 
+TurnState :: enum {
+	Player,
+	Enemy,
+}
+
 State :: struct {
 	player:   Entity,
 	entities: []Entity,
@@ -52,6 +57,7 @@ Game :: struct {
 	entities: [dynamic]Entity,
 	history:  [dynamic]State,
 	assets:   Assets,
+	turn:     TurnState,
 }
 
 Assets :: struct {
@@ -80,6 +86,7 @@ main :: proc() {
 			grass_model = rl.LoadModel("../res/models/grass.glb"),
 			enemy_model = rl.LoadModel("../res/models/enemy.glb"),
 		},
+		turn = .Player,
 	}
 
 	animation_frame: i32
@@ -250,11 +257,20 @@ move_player :: proc(using game: ^Game) {
 
 		player.target_pos += move_direction
 		player.is_moving = true
+		turn = .Enemy
 	}
 }
 
 update_game :: proc(using game: ^Game, dt: f32) {
-	move_player(game)
+	if !are_any_entities_moving(game) {
+		switch turn {
+		case .Player:
+			move_player(game)
+		case .Enemy:
+			enemy_turn(game)
+		}
+	}
+
 	update_entity(&player, dt)
 
 	for &entity in entities {
@@ -262,6 +278,39 @@ update_game :: proc(using game: ^Game, dt: f32) {
 	}
 
 	camera_follow(&camera, &player, CAMERA_OFFSET)
+}
+
+enemy_turn :: proc(using game: ^Game) {
+	for &entity in entities {
+		if entity.type == .Enemy {
+			move_entity(&entity, {0, 0, 1}, game)
+		}
+	}
+
+	turn = .Player
+}
+
+move_entity :: proc(entity: ^Entity, direction: Vector3, game: ^Game) {
+	if direction == 0 {return}
+
+	next_pos := entity.pos + direction
+	collided_entity, _ := get_entity_at_pos(next_pos, game)
+
+	if collided_entity != nil {
+		if collided_entity.is_pushable {
+			next_entity_pos := collided_entity.pos + direction
+			if next_entity, _ := get_entity_at_pos(next_entity_pos, game);
+			   next_entity != nil && next_entity.is_solid {
+				return
+			}
+			collided_entity.target_pos += direction
+		} else if collided_entity.is_solid {
+			return
+		}
+	}
+
+	entity.target_pos += direction
+	entity.is_moving = true
 }
 
 update_editor :: proc(using game: ^Game) {
@@ -375,6 +424,20 @@ get_entity_at_pos :: proc(pos: [3]f32, using game: ^Game) -> (entity: ^Entity, i
 	}
 
 	return nil, -1
+}
+
+are_any_entities_moving :: proc(using game: ^Game) -> bool {
+	if player.is_moving {
+		return true
+	}
+
+	for entity in entities {
+		if entity.is_moving {
+			return true
+		}
+	}
+
+	return false
 }
 
 get_entity_model :: proc(type: EntityType, using game: ^Game) -> ^rl.Model {
