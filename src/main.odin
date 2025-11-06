@@ -1,7 +1,10 @@
 package frog_knight
 
+import "core:encoding/json"
+import "core:fmt"
 import "core:math"
 import "core:math/linalg"
+import "core:os"
 import rl "vendor:raylib"
 
 Vector3 :: [3]f32
@@ -116,6 +119,8 @@ main :: proc() {
 		dt := rl.GetFrameTime()
 
 		if rl.IsKeyPressed(.F1) {game.editor.active = !game.editor.active}
+		if rl.IsKeyPressed(.F5) {save_game_to_file(&game, "world.json")}
+		if rl.IsKeyPressed(.F9) {load_game_from_file(&game, "world.json")}
 		if rl.IsKeyPressed(.Z) {undo_move(&game)}
 
 		if !game.editor.active {
@@ -181,7 +186,7 @@ main :: proc() {
 	rl.CloseWindow()
 }
 
-save_state :: proc(game: ^Game) {
+get_current_state :: proc(game: ^Game) -> State {
 	entities_slice := make([]Entity, len(game.entities))
 
 	for entity, i in game.entities {
@@ -193,18 +198,24 @@ save_state :: proc(game: ^Game) {
 		entities = entities_slice,
 	}
 
-	append(&game.history, save_state)
+	return save_state
+}
+
+load_state :: proc(state: State, game: ^Game) {
+	game.player = state.player
+
+	clear(&game.entities)
+
+	for entity in state.entities {
+		append(&game.entities, entity)
+	}
 }
 
 undo_move :: proc(game: ^Game) {
 	if len(game.history) <= 0 {return}
-	undo_state := pop(&game.history)
-	game.player = undo_state.player
-	clear(&game.entities)
 
-	for entity in undo_state.entities {
-		append(&game.entities, entity)
-	}
+	undo_state := pop(&game.history)
+	load_state(undo_state, game)
 
 	delete(undo_state.entities)
 }
@@ -229,7 +240,8 @@ move_player :: proc(using game: ^Game) {
 	}
 
 	if move_direction != 0 {
-		save_state(game)
+		state := get_current_state(game)
+		append(&game.history, state)
 
 		next_pos := player.pos + move_direction
 		collided_entity, _ := get_entity_at_pos(next_pos, game)
@@ -385,4 +397,43 @@ get_entity_model :: proc(type: EntityType, using game: ^Game) -> ^rl.Model {
 	}
 
 	return nil
+}
+
+save_game_to_file :: proc(game: ^Game, filepath: string) {
+	save_state := get_current_state(game)
+
+	options := json.Marshal_Options {
+		use_enum_names = true,
+	}
+
+	if data, error := json.marshal(save_state, options); error == nil {
+		if os.write_entire_file(filepath, data) {
+			fmt.println("Game saved")
+		} else {
+			fmt.println("Failed to save game")
+		}
+	} else {
+		fmt.println("Failed to marshal game state:", error)
+	}
+}
+
+load_game_from_file :: proc(game: ^Game, filepath: string) {
+	fmt.printf("Attempting to load from: %s\n", filepath)
+
+	if level_data, ok := os.read_entire_file(filepath); ok {
+		loaded_state: State
+
+		options := json.Marshal_Options {
+			use_enum_names = true,
+		}
+
+		if error := json.unmarshal(level_data, &loaded_state); error == nil {
+			load_state(loaded_state, game)
+			fmt.println("Game loaded successfully!")
+		} else {
+			fmt.println("Failed to parse JSON:", error)
+		}
+	} else {
+		fmt.println("Failed to read file")
+	}
 }
