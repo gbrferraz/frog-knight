@@ -283,7 +283,15 @@ update_game :: proc(using game: ^Game, dt: f32) {
 enemy_turn :: proc(using game: ^Game) {
 	for &entity in entities {
 		if entity.type == .Enemy {
-			move_entity(&entity, {0, 0, 1}, game)
+			direction_vector := player.pos - entity.pos
+			move_vector: Vector3
+
+			if abs(direction_vector.x) > abs(direction_vector.z) {
+				move_vector.x = math.sign(direction_vector.x)
+			} else {
+				move_vector.z = math.sign(direction_vector.z)
+			}
+			move_entity(&entity, move_vector, game)
 		}
 	}
 
