@@ -239,25 +239,12 @@ move_player :: proc(using game: ^Game) {
 		state := get_current_state(game)
 		append(&game.history, state)
 
-		next_pos := player.pos + move_direction
-		collided_entity, _ := get_entity_at_pos(next_pos, game)
-
-		if collided_entity != nil {
-			if collided_entity.is_pushable {
-				next_entity_pos := collided_entity.pos + move_direction
-				if next_entity, _ := get_entity_at_pos(next_entity_pos, game);
-				   next_entity != nil && next_entity.is_solid {
-					return
-				}
-				collided_entity.target_pos += move_direction
-			} else if collided_entity.is_solid {
-				return
-			}
+		if try_move_entity(&player, move_direction, game) {
+			turn = .Enemy
+		} else {
+			pop(&game.history)
+			delete(state.entities)
 		}
-
-		player.target_pos += move_direction
-		player.is_moving = true
-		turn = .Enemy
 	}
 }
 
@@ -291,15 +278,15 @@ enemy_turn :: proc(using game: ^Game) {
 			} else {
 				move_vector.z = math.sign(direction_vector.z)
 			}
-			move_entity(&entity, move_vector, game)
+			try_move_entity(&entity, move_vector, game)
 		}
 	}
 
 	turn = .Player
 }
 
-move_entity :: proc(entity: ^Entity, direction: Vector3, game: ^Game) {
-	if direction == 0 {return}
+try_move_entity :: proc(entity: ^Entity, direction: Vector3, game: ^Game) -> bool {
+	if entity.is_moving || direction == 0 {return false}
 
 	next_pos := entity.pos + direction
 	collided_entity, _ := get_entity_at_pos(next_pos, game)
@@ -308,17 +295,18 @@ move_entity :: proc(entity: ^Entity, direction: Vector3, game: ^Game) {
 		if collided_entity.is_pushable {
 			next_entity_pos := collided_entity.pos + direction
 			if next_entity, _ := get_entity_at_pos(next_entity_pos, game);
-			   next_entity != nil && next_entity.is_solid {
-				return
-			}
+			   next_entity != nil && next_entity.is_solid {return false}
+
 			collided_entity.target_pos += direction
-		} else if collided_entity.is_solid {
-			return
-		}
+			collided_entity.is_moving = true
+
+		} else if collided_entity.is_solid {return false}
+
 	}
 
 	entity.target_pos += direction
 	entity.is_moving = true
+	return true
 }
 
 update_editor :: proc(using game: ^Game) {
