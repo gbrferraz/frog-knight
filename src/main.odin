@@ -352,25 +352,10 @@ update_editor :: proc(using game: ^Game) {
 	hovered_entity, entity_index := get_entity_at_pos(editor.preview_pos, game)
 
 	if rl.IsMouseButtonDown(.LEFT) && hovered_entity == nil && !editor.cursor_busy {
-		new_entity := Entity {
-			pos        = {editor.preview_pos.x, f32(editor.y_layer), editor.preview_pos.z},
-			target_pos = {editor.preview_pos.x, f32(editor.y_layer), editor.preview_pos.z},
-		}
+		entity_pos := Vector3{editor.preview_pos.x, f32(editor.y_layer), editor.preview_pos.z}
+		new_entity := create_entity(editor.current_entity, entity_pos)
 
 		new_entity.type = editor.current_entity
-
-		switch new_entity.type {
-		case .Wall:
-			new_entity.is_solid = true
-			new_entity.is_pushable = false
-		case .Box:
-			new_entity.is_solid = true
-			new_entity.is_pushable = true
-		case .Grass:
-			new_entity.is_solid = true
-		case .Enemy:
-		}
-
 
 		append(&game.entities, new_entity)
 	}
@@ -390,6 +375,29 @@ update_editor :: proc(using game: ^Game) {
 	} else if rl.IsMouseButtonReleased(.RIGHT) {
 		rl.EnableCursor()
 	}
+}
+
+create_entity :: proc(type: EntityType, pos: Vector3) -> Entity {
+	using entity := Entity {
+		pos        = pos,
+		target_pos = pos,
+		type       = type,
+	}
+
+	switch type {
+	case .Wall:
+		is_solid = true
+		is_pushable = false
+	case .Box:
+		is_solid = true
+		is_pushable = true
+	case .Grass:
+		is_solid = true
+	case .Enemy:
+		is_solid = true
+	}
+
+	return entity
 }
 
 camera_follow :: proc(camera: ^rl.Camera, entity: ^Entity, offset: Vector3) {
