@@ -39,7 +39,7 @@ main :: proc() {
 	rl.SetMaterialTexture(&game.assets.grass_model.materials[1], .ALBEDO, material_texture)
 
 	if os.exists("world.json") {
-		load_game_from_file(&game, "world.json")
+		load_game_from_file(&game, "../world.json")
 	}
 
 	for &entity in game.entities {
@@ -50,8 +50,8 @@ main :: proc() {
 		dt := rl.GetFrameTime()
 
 		if rl.IsKeyPressed(.F1) {game.editor.active = !game.editor.active}
-		if rl.IsKeyPressed(.F5) {save_game_to_file(&game, "world.json")}
-		if rl.IsKeyPressed(.F9) {load_game_from_file(&game, "world.json")}
+		if rl.IsKeyPressed(.F5) {save_game_to_file(&game, "../world.json")}
+		if rl.IsKeyPressed(.F9) {load_game_from_file(&game, "../world.json")}
 		if rl.IsKeyPressed(.Z) {undo_move(&game)}
 
 		if !game.editor.active {
