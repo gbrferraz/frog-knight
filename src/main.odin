@@ -38,7 +38,7 @@ main :: proc() {
 	rl.SetMaterialTexture(&game.assets.player_model.materials[1], .ALBEDO, material_texture)
 	rl.SetMaterialTexture(&game.assets.grass_model.materials[1], .ALBEDO, material_texture)
 
-	if os.exists("world.json") {
+	if os.exists("../world.json") {
 		load_game_from_file(&game, "../world.json")
 	}
 
