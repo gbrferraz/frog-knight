@@ -108,7 +108,6 @@ try_move_entity :: proc(entity: ^Entity, direction: Vector3, game: ^Game) -> boo
 			collided_entity.is_moving = true
 
 		} else if collided_entity.is_solid {return false}
-
 	}
 
 	entity.target_pos += direction
@@ -116,11 +115,15 @@ try_move_entity :: proc(entity: ^Entity, direction: Vector3, game: ^Game) -> boo
 	return true
 }
 
-get_entity_at_pos :: proc(pos: [3]f32, using game: ^Game) -> (entity: ^Entity, index: int) {
-	for &entity, i in entities {
+get_entity_at_pos :: proc(pos: [3]f32, game: ^Game) -> (entity: ^Entity, index: int) {
+	for &entity, i in game.entities {
 		if pos == entity.target_pos {
 			return &entity, i
 		}
+	}
+
+	if pos == game.player.target_pos {
+		return &game.player, -1
 	}
 
 	return nil, -1

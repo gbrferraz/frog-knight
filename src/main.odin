@@ -13,6 +13,7 @@ main :: proc() {
 	rl.GuiSetStyle(.DEFAULT, i32(rl.GuiDefaultProperty.TEXT_SIZE), FONT_SIZE)
 
 	game := Game {
+		player = {is_solid = true},
 		camera = {up = {0, 1, 0}, fovy = 45, projection = .PERSPECTIVE},
 		assets = {
 			player_model = rl.LoadModel("../res/models/player.glb"),
