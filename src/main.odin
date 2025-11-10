@@ -44,7 +44,7 @@ main :: proc() {
 	}
 
 	for &entity in game.entities {
-		entity.target_pos = entity.pos
+		entity.target_pos = vec3_to_vec3i(entity.pos)
 	}
 
 	for !rl.WindowShouldClose() {
@@ -75,7 +75,7 @@ main :: proc() {
 			game.assets.player_model,
 			game.player.pos,
 			{0, 1, 0},
-			game.player.rotation,
+			game.player.rot,
 			1,
 			rl.WHITE,
 		)
@@ -93,7 +93,7 @@ main :: proc() {
 		rl.EndMode3D()
 		if game.editor.active {
 			entity_amount := rl.TextFormat("Entities: %i", len(game.entities))
-			entity_amount_pos := Vector2{10, f32(rl.GetScreenHeight() - FONT_SIZE - 10)}
+			entity_amount_pos := Vec2{10, f32(rl.GetScreenHeight() - FONT_SIZE - 10)}
 
 			rl.DrawTextPro(font, entity_amount, entity_amount_pos, 0, 0, FONT_SIZE, 0, rl.GREEN)
 

@@ -6,9 +6,9 @@ import rl "vendor:raylib"
 Editor :: struct {
 	active:         bool,
 	current_entity: EntityType,
-	preview_pos:    Vector3,
+	preview_pos:    Vec3,
 	cursor_busy:    bool,
-	y_layer:        int,
+	y_layer:        i32,
 }
 
 update_editor :: proc(using game: ^Game) {
@@ -54,7 +54,7 @@ update_editor :: proc(using game: ^Game) {
 	hovered_entity, entity_index := get_entity_at_pos(editor.preview_pos, game)
 
 	if rl.IsMouseButtonDown(.LEFT) && hovered_entity == nil && !editor.cursor_busy {
-		entity_pos := Vector3{editor.preview_pos.x, f32(editor.y_layer), editor.preview_pos.z}
+		entity_pos := Vec3i{i32(editor.preview_pos.x), editor.y_layer, i32(editor.preview_pos.z)}
 
 		new_entity := create_entity(editor.current_entity, entity_pos)
 

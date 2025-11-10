@@ -3,14 +3,14 @@ package frog_knight
 import "core:math/linalg"
 
 Entity :: struct {
-	pos:             Vector3,
-	target_pos:      Vector3,
-	rotation:        f32,
-	target_rotation: f32,
-	is_moving:       bool,
-	is_solid:        bool,
-	is_pushable:     bool,
-	type:            EntityType,
+	pos:         Vec3,
+	target_pos:  Vec3i,
+	rot:         f32,
+	target_rot:  f32,
+	is_moving:   bool,
+	is_solid:    bool,
+	is_pushable: bool,
+	type:        EntityType,
 }
 
 EntityType :: enum {
@@ -20,9 +20,9 @@ EntityType :: enum {
 	Enemy,
 }
 
-create_entity :: proc(type: EntityType, pos: Vector3) -> Entity {
+create_entity :: proc(type: EntityType, pos: Vec3i) -> Entity {
 	using entity := Entity {
-		pos        = pos,
+		pos        = vec3i_to_vec3(pos),
 		target_pos = pos,
 		type       = type,
 	}
@@ -44,11 +44,11 @@ create_entity :: proc(type: EntityType, pos: Vector3) -> Entity {
 }
 
 update_entity :: proc(using entity: ^Entity, dt: f32) {
-	pos = linalg.lerp(pos, target_pos, dt * ENTITY_SPEED)
-	distance_to_target := linalg.length(target_pos - pos)
+	pos = linalg.lerp(pos, vec3i_to_vec3(target_pos), dt * ENTITY_SPEED)
+	distance_to_target := linalg.length(vec3i_to_vec3(target_pos) - pos)
 
 	if distance_to_target < 0.1 {
-		pos = target_pos
+		pos = vec3i_to_vec3(target_pos)
 		is_moving = false
 	}
 }

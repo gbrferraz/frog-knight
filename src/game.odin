@@ -7,11 +7,12 @@ import "core:os"
 import rl "vendor:raylib"
 
 ENTITY_SPEED :: 20
-CAMERA_OFFSET :: Vector3{0, 8, 6}
+CAMERA_OFFSET :: Vec3{0, 8, 6}
 FONT_SIZE :: 30
 
-Vector3 :: [3]f32
-Vector2 :: [2]f32
+Vec3 :: [3]f32
+Vec2 :: [2]f32
+Vec3i :: [3]i32
 
 State :: struct {
 	player:   Entity,
@@ -41,6 +42,60 @@ Assets :: struct {
 	enemy_model:  rl.Model,
 }
 
+move_player :: proc(using game: ^Game) {
+	if player.is_moving {return}
+
+	move_direction: Vec3
+
+	if rl.IsKeyPressed(.LEFT) || rl.IsKeyPressed(.A) {
+		move_direction.x -= 1
+		player.rot = 270
+	} else if rl.IsKeyPressed(.RIGHT) || rl.IsKeyPressed(.D) {
+		move_direction.x += 1
+		player.rot = 90
+	} else if rl.IsKeyPressed(.UP) || rl.IsKeyPressed(.W) {
+		move_direction.z -= 1
+		player.rot = 180
+	} else if rl.IsKeyPressed(.DOWN) || rl.IsKeyPressed(.S) {
+		move_direction.z += 1
+		player.rot = 0
+	}
+
+	if move_direction != 0 {
+		state := get_current_state(game)
+		append(&game.history, state)
+
+		target_position := player.pos + move_direction
+
+		if try_move_entity(&player, move_direction, game) {
+			turn = .Enemy
+		} else if try_attack(game, target_position) {
+			turn = .Enemy
+		} else {
+			pop(&game.history)
+			delete(state.entities)
+		}
+	}
+}
+
+enemy_turn :: proc(using game: ^Game) {
+	for &entity in entities {
+		if entity.type == .Enemy {
+			direction_vector := player.pos - entity.pos
+			move_vector: Vec3
+
+			if abs(direction_vector.x) > abs(direction_vector.z) {
+				move_vector.x = math.sign(direction_vector.x)
+			} else {
+				move_vector.z = math.sign(direction_vector.z)
+			}
+
+			try_move_entity(&entity, move_vector, game)
+		}
+	}
+	turn = .Player
+}
+
 update_game :: proc(using game: ^Game, dt: f32) {
 	if !are_any_entities_moving(game) {
 		switch turn {
@@ -60,39 +115,7 @@ update_game :: proc(using game: ^Game, dt: f32) {
 	camera_follow(&camera, &player, CAMERA_OFFSET)
 }
 
-move_player :: proc(using game: ^Game) {
-	if player.is_moving {return}
-
-	move_direction: Vector3
-
-	if rl.IsKeyPressed(.LEFT) || rl.IsKeyPressed(.A) {
-		move_direction.x -= 1
-		player.rotation = 270
-	} else if rl.IsKeyPressed(.RIGHT) || rl.IsKeyPressed(.D) {
-		move_direction.x += 1
-		player.rotation = 90
-	} else if rl.IsKeyPressed(.UP) || rl.IsKeyPressed(.W) {
-		move_direction.z -= 1
-		player.rotation = 180
-	} else if rl.IsKeyPressed(.DOWN) || rl.IsKeyPressed(.S) {
-		move_direction.z += 1
-		player.rotation = 0
-	}
-
-	if move_direction != 0 {
-		state := get_current_state(game)
-		append(&game.history, state)
-
-		if try_move_entity(&player, move_direction, game) {
-			turn = .Enemy
-		} else {
-			pop(&game.history)
-			delete(state.entities)
-		}
-	}
-}
-
-try_move_entity :: proc(entity: ^Entity, direction: Vector3, game: ^Game) -> bool {
+try_move_entity :: proc(entity: ^Entity, direction: Vec3, game: ^Game) -> bool {
 	if entity.is_moving || direction == 0 {return false}
 
 	next_pos := entity.pos + direction
@@ -104,25 +127,36 @@ try_move_entity :: proc(entity: ^Entity, direction: Vector3, game: ^Game) -> boo
 			if next_entity, _ := get_entity_at_pos(next_entity_pos, game);
 			   next_entity != nil && next_entity.is_solid {return false}
 
-			collided_entity.target_pos += direction
+			collided_entity.target_pos += vec3_to_vec3i(direction)
 			collided_entity.is_moving = true
 
 		} else if collided_entity.is_solid {return false}
 	}
 
-	entity.target_pos += direction
+	entity.target_pos += vec3_to_vec3i(direction)
 	entity.is_moving = true
 	return true
 }
 
-get_entity_at_pos :: proc(pos: [3]f32, game: ^Game) -> (entity: ^Entity, index: int) {
+try_attack :: proc(using game: ^Game, position: Vec3) -> bool {
+	for entity, i in entities {
+		if entity.pos == position {
+			unordered_remove(&entities, i)
+			return true
+		}
+	}
+
+	return false
+}
+
+get_entity_at_pos :: proc(pos: Vec3, game: ^Game) -> (entity: ^Entity, index: int) {
 	for &entity, i in game.entities {
-		if pos == entity.target_pos {
+		if vec3_to_vec3i(pos) == entity.target_pos {
 			return &entity, i
 		}
 	}
 
-	if pos == game.player.target_pos {
+	if vec3_to_vec3i(pos) == game.player.target_pos {
 		return &game.player, -1
 	}
 
@@ -192,25 +226,7 @@ undo_move :: proc(game: ^Game) {
 	delete(undo_state.entities)
 }
 
-enemy_turn :: proc(using game: ^Game) {
-	for &entity in entities {
-		if entity.type == .Enemy {
-			direction_vector := player.pos - entity.pos
-			move_vector: Vector3
-
-			if abs(direction_vector.x) > abs(direction_vector.z) {
-				move_vector.x = math.sign(direction_vector.x)
-			} else {
-				move_vector.z = math.sign(direction_vector.z)
-			}
-			try_move_entity(&entity, move_vector, game)
-		}
-	}
-
-	turn = .Player
-}
-
-camera_follow :: proc(camera: ^rl.Camera, entity: ^Entity, offset: Vector3) {
+camera_follow :: proc(camera: ^rl.Camera, entity: ^Entity, offset: Vec3) {
 	camera.position = entity.pos + offset
 	camera.target = entity.pos
 }
