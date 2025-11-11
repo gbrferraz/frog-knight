@@ -1,6 +1,9 @@
 package frog_knight
 
+import "core:encoding/json"
+import "core:fmt"
 import "core:math"
+import "core:os"
 import rl "vendor:raylib"
 
 Editor :: struct {
@@ -103,4 +106,43 @@ draw_editor :: proc(game: ^Game, font: rl.Font) {
 get_editor_button_rec :: proc(index: int) -> rl.Rectangle {
 	return rl.Rectangle{10, 10 + (70 * f32(index)), 100, 60}
 
+}
+
+save_game_to_file :: proc(game: ^Game, filepath: string) {
+	save_state := get_current_state(game)
+
+	options := json.Marshal_Options {
+		use_enum_names = true,
+	}
+
+	if data, error := json.marshal(save_state, options); error == nil {
+		if os.write_entire_file(filepath, data) {
+			fmt.println("Game saved")
+		} else {
+			fmt.println("Failed to save game")
+		}
+	} else {
+		fmt.println("Failed to marshal game state:", error)
+	}
+}
+
+load_game_from_file :: proc(game: ^Game, filepath: string) {
+	fmt.printf("Attempting to load from: %s\n", filepath)
+
+	if level_data, ok := os.read_entire_file(filepath); ok {
+		loaded_state: State
+
+		options := json.Marshal_Options {
+			use_enum_names = true,
+		}
+
+		if error := json.unmarshal(level_data, &loaded_state); error == nil {
+			load_state(loaded_state, game)
+			fmt.println("Game loaded successfully!")
+		} else {
+			fmt.println("Failed to parse JSON:", error)
+		}
+	} else {
+		fmt.println("Failed to read file")
+	}
 }
