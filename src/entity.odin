@@ -3,14 +3,15 @@ package frog_knight
 import "core:math/linalg"
 
 Entity :: struct {
-	pos:         Vec3,
-	target_pos:  Vec3i,
-	rot:         f32,
-	target_rot:  f32,
-	is_moving:   bool,
-	is_solid:    bool,
-	is_pushable: bool,
-	type:        EntityType,
+	pos:             Vec3,
+	target_pos:      Vec3i,
+	rot:             f32,
+	target_rot:      f32,
+	is_moving:       bool,
+	is_solid:        bool,
+	is_pushable:     bool,
+	is_interactable: bool,
+	type:            EntityType,
 }
 
 EntityType :: enum {
@@ -41,6 +42,7 @@ create_entity :: proc(type: EntityType, pos: Vec3i) -> Entity {
 		is_solid = true
 	case .Door:
 		is_solid = true
+		is_interactable = true
 	}
 
 	return entity

@@ -14,15 +14,21 @@ Vec3 :: [3]f32
 Vec2 :: [2]f32
 Vec3i :: [3]i32
 
+GameStatus :: enum {
+	Playing,
+	Lose,
+	Win,
+}
+
 State :: struct {
-	over:     bool,
+	status:   GameStatus,
 	player:   Entity,
 	entities: []Entity,
 }
 
 Game :: struct {
 	editor:   Editor,
-	over:     bool,
+	status:   GameStatus,
 	player:   Entity,
 	camera:   rl.Camera,
 	entities: [dynamic]Entity,
@@ -46,9 +52,9 @@ Assets :: struct {
 }
 
 move_player :: proc(using game: ^Game) {
-	if player.is_moving || game.over {return}
+	if player.is_moving || game.status == .Lose {return}
 
-	move_direction: Vec3
+	move_direction: Vec3i
 
 	if rl.IsKeyPressed(.LEFT) || rl.IsKeyPressed(.A) {
 		move_direction.x -= 1
@@ -68,11 +74,13 @@ move_player :: proc(using game: ^Game) {
 		state := get_current_state(game)
 		append(&game.history, state)
 
-		target_position := player.pos + move_direction
+		target_position := player.target_pos + move_direction
 
-		if try_move_entity(&player, move_direction, game) {
+		if try_move(&player, move_direction, game) {
 			turn = .Enemy
 		} else if try_attack(game, target_position) {
+			turn = .Enemy
+		} else if try_interact(game, target_position) {
 			turn = .Enemy
 		} else {
 			pop(&game.history)
@@ -85,20 +93,20 @@ enemies_turn :: proc(using game: ^Game) {
 	for &entity in entities {
 		if entity.type == .Enemy {
 			direction_vector := player.pos - entity.pos
-			move_vector: Vec3
+			move_vector: Vec3i
 
 			if rl.Vector3Length(direction_vector) <= 1 {
 				// Attack player
-				over = true
+				status = .Lose
 			}
 
 			if abs(direction_vector.x) > abs(direction_vector.z) {
-				move_vector.x = math.sign(direction_vector.x)
+				move_vector.x = i32(math.sign(direction_vector.x))
 			} else {
-				move_vector.z = math.sign(direction_vector.z)
+				move_vector.z = i32(math.sign(direction_vector.z))
 			}
 
-			try_move_entity(&entity, move_vector, game)
+			try_move(&entity, move_vector, game)
 		}
 	}
 	turn = .Player
@@ -123,32 +131,32 @@ update_game :: proc(using game: ^Game, dt: f32) {
 	camera_follow(&camera, &player, CAMERA_OFFSET)
 }
 
-try_move_entity :: proc(entity: ^Entity, direction: Vec3, game: ^Game) -> bool {
+try_move :: proc(entity: ^Entity, direction: Vec3i, game: ^Game) -> bool {
 	if entity.is_moving || direction == 0 {return false}
 
-	next_pos := entity.pos + direction
+	next_pos := entity.target_pos + direction
 	collided_entity, _ := get_entity_at_pos(next_pos, game)
 
 	if collided_entity != nil {
 		if collided_entity.is_pushable {
-			next_entity_pos := collided_entity.pos + direction
+			next_entity_pos := collided_entity.target_pos + direction
 			if next_entity, _ := get_entity_at_pos(next_entity_pos, game);
 			   next_entity != nil && next_entity.is_solid {return false}
 
-			collided_entity.target_pos += vec3_to_vec3i(direction)
+			collided_entity.target_pos += direction
 			collided_entity.is_moving = true
 
 		} else if collided_entity.is_solid {return false}
 	}
 
-	entity.target_pos += vec3_to_vec3i(direction)
+	entity.target_pos += direction
 	entity.is_moving = true
 	return true
 }
 
-try_attack :: proc(using game: ^Game, position: Vec3) -> bool {
+try_attack :: proc(using game: ^Game, pos: Vec3i) -> bool {
 	for entity, i in entities {
-		if entity.type == .Enemy && entity.pos == position {
+		if entity.type == .Enemy && entity.target_pos == pos {
 			unordered_remove(&entities, i)
 			return true
 		}
@@ -157,14 +165,26 @@ try_attack :: proc(using game: ^Game, position: Vec3) -> bool {
 	return false
 }
 
-get_entity_at_pos :: proc(pos: Vec3, game: ^Game) -> (entity: ^Entity, index: int) {
+try_interact :: proc(using game: ^Game, pos: Vec3i) -> bool {
+	for entity in entities {
+		if entity.is_interactable && entity.target_pos == pos {
+			if entity.type == .Door {
+				game.status = .Win
+			}
+			return true
+		}
+	}
+	return false
+}
+
+get_entity_at_pos :: proc(pos: Vec3i, game: ^Game) -> (entity: ^Entity, index: int) {
 	for &entity, i in game.entities {
-		if vec3_to_vec3i(pos) == entity.target_pos {
+		if pos == entity.target_pos {
 			return &entity, i
 		}
 	}
 
-	if vec3_to_vec3i(pos) == game.player.target_pos {
+	if pos == game.player.target_pos {
 		return &game.player, -1
 	}
 
@@ -210,7 +230,7 @@ get_current_state :: proc(game: ^Game) -> State {
 	}
 
 	current_state := State {
-		over     = game.over,
+		status   = game.status,
 		player   = game.player,
 		entities = entities_slice,
 	}
@@ -219,7 +239,7 @@ get_current_state :: proc(game: ^Game) -> State {
 }
 
 load_state :: proc(state: State, game: ^Game) {
-	game.over = state.over
+	game.status = state.status
 	game.player = state.player
 
 	clear(&game.entities)

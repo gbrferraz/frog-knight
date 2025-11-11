@@ -1,5 +1,6 @@
 package frog_knight
 
+import "core:fmt"
 import "core:os"
 import rl "vendor:raylib"
 
@@ -93,10 +94,16 @@ main :: proc() {
 
 		rl.EndMode3D()
 
-		if game.over {
+		if game.status == .Lose {
 			rl.DrawText("Dude, you fucking died", 4, 4, 60, rl.RED)
 			rl.DrawText("Press Z to undo", 4, 68, 40, rl.GRAY)
+		} else if game.status == .Win {
+			rl.DrawText("Dude, you fucking won!!!!!", 4, 4, 60, rl.RED)
 		}
+
+		game_status_str := fmt.ctprint("Game Status: ", game.status)
+		rl.DrawText(game_status_str, 4, 4, 20, rl.RED)
+
 
 		if game.editor.active {
 			draw_editor(&game, font)

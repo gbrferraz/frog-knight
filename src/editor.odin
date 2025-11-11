@@ -51,7 +51,7 @@ update_editor :: proc(using game: ^Game) {
 		}
 	}
 
-	hovered_entity, entity_index := get_entity_at_pos(editor.preview_pos, game)
+	hovered_entity, entity_index := get_entity_at_pos(vec3_to_vec3i(editor.preview_pos), game)
 
 	if rl.IsMouseButtonDown(.LEFT) && hovered_entity == nil && !editor.cursor_busy {
 		entity_pos := Vec3i{i32(editor.preview_pos.x), editor.y_layer, i32(editor.preview_pos.z)}
