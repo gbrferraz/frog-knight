@@ -21,6 +21,7 @@ main :: proc() {
 			wall_model = rl.LoadModel("../res/models/wall.glb"),
 			grass_model = rl.LoadModel("../res/models/grass.glb"),
 			enemy_model = rl.LoadModel("../res/models/enemy.glb"),
+			door_model = rl.LoadModel("../res/models/door.glb"),
 		},
 		turn = .Player,
 	}
@@ -91,27 +92,16 @@ main :: proc() {
 		}
 
 		rl.EndMode3D()
-		if game.editor.active {
-			entity_amount := rl.TextFormat("Entities: %i", len(game.entities))
-			entity_amount_pos := Vec2{10, f32(rl.GetScreenHeight() - FONT_SIZE - 10)}
 
-			rl.DrawTextPro(font, entity_amount, entity_amount_pos, 0, 0, FONT_SIZE, 0, rl.GREEN)
-
-			for type, i in EntityType {
-				rec := get_editor_button_rec(i)
-				name := rl.TextFormat("%s", type)
-
-				if game.editor.current_entity == type {
-					rl.GuiSetState(i32(rl.GuiState.STATE_PRESSED))
-					rl.GuiButton(rec, name)
-					rl.GuiSetState(i32(rl.GuiState.STATE_NORMAL))
-				} else {
-					if rl.GuiButton(rec, name) {
-						game.editor.current_entity = type
-					}
-				}
-			}
+		if game.over {
+			rl.DrawText("Dude, you fucking died", 4, 4, 60, rl.RED)
+			rl.DrawText("Press Z to undo", 4, 68, 40, rl.GRAY)
 		}
+
+		if game.editor.active {
+			draw_editor(&game, font)
+		}
+
 		rl.EndDrawing()
 	}
 

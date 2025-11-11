@@ -15,12 +15,14 @@ Vec2 :: [2]f32
 Vec3i :: [3]i32
 
 State :: struct {
+	over:     bool,
 	player:   Entity,
 	entities: []Entity,
 }
 
 Game :: struct {
 	editor:   Editor,
+	over:     bool,
 	player:   Entity,
 	camera:   rl.Camera,
 	entities: [dynamic]Entity,
@@ -40,10 +42,11 @@ Assets :: struct {
 	wall_model:   rl.Model,
 	grass_model:  rl.Model,
 	enemy_model:  rl.Model,
+	door_model:   rl.Model,
 }
 
 move_player :: proc(using game: ^Game) {
-	if player.is_moving {return}
+	if player.is_moving || game.over {return}
 
 	move_direction: Vec3
 
@@ -78,11 +81,16 @@ move_player :: proc(using game: ^Game) {
 	}
 }
 
-enemy_turn :: proc(using game: ^Game) {
+enemies_turn :: proc(using game: ^Game) {
 	for &entity in entities {
 		if entity.type == .Enemy {
 			direction_vector := player.pos - entity.pos
 			move_vector: Vec3
+
+			if rl.Vector3Length(direction_vector) <= 1 {
+				// Attack player
+				over = true
+			}
 
 			if abs(direction_vector.x) > abs(direction_vector.z) {
 				move_vector.x = math.sign(direction_vector.x)
@@ -102,7 +110,7 @@ update_game :: proc(using game: ^Game, dt: f32) {
 		case .Player:
 			move_player(game)
 		case .Enemy:
-			enemy_turn(game)
+			enemies_turn(game)
 		}
 	}
 
@@ -140,7 +148,7 @@ try_move_entity :: proc(entity: ^Entity, direction: Vec3, game: ^Game) -> bool {
 
 try_attack :: proc(using game: ^Game, position: Vec3) -> bool {
 	for entity, i in entities {
-		if entity.pos == position {
+		if entity.type == .Enemy && entity.pos == position {
 			unordered_remove(&entities, i)
 			return true
 		}
@@ -187,6 +195,8 @@ get_entity_model :: proc(type: EntityType, using game: ^Game) -> ^rl.Model {
 		return &assets.grass_model
 	case .Enemy:
 		return &assets.enemy_model
+	case .Door:
+		return &assets.door_model
 	}
 
 	return nil
@@ -199,15 +209,17 @@ get_current_state :: proc(game: ^Game) -> State {
 		entities_slice[i] = entity
 	}
 
-	save_state := State {
+	current_state := State {
+		over     = game.over,
 		player   = game.player,
 		entities = entities_slice,
 	}
 
-	return save_state
+	return current_state
 }
 
 load_state :: proc(state: State, game: ^Game) {
+	game.over = state.over
 	game.player = state.player
 
 	clear(&game.entities)

@@ -18,6 +18,7 @@ EntityType :: enum {
 	Box,
 	Grass,
 	Enemy,
+	Door,
 }
 
 create_entity :: proc(type: EntityType, pos: Vec3i) -> Entity {
@@ -37,6 +38,8 @@ create_entity :: proc(type: EntityType, pos: Vec3i) -> Entity {
 	case .Grass:
 		is_solid = true
 	case .Enemy:
+		is_solid = true
+	case .Door:
 		is_solid = true
 	}
 
