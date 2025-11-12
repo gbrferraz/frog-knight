@@ -1,6 +1,5 @@
 package frog_knight
 
-import "core:fmt"
 import "core:os"
 import rl "vendor:raylib"
 
@@ -14,7 +13,7 @@ main :: proc() {
 	rl.GuiSetStyle(.DEFAULT, i32(rl.GuiDefaultProperty.TEXT_SIZE), FONT_SIZE)
 
 	game := Game {
-		player = {is_solid = true},
+		player = {is_solid = true, gravity = true},
 		camera = {up = {0, 1, 0}, fovy = 45, projection = .PERSPECTIVE},
 		assets = {
 			player_model = rl.LoadModel("../res/models/player.glb"),
@@ -25,6 +24,7 @@ main :: proc() {
 			door_model = rl.LoadModel("../res/models/door.glb"),
 		},
 		turn = .Player,
+		///editor = {active = true},
 	}
 
 	animation_frame: i32
@@ -37,9 +37,10 @@ main :: proc() {
 	rl.SetTextureFilter(material_texture, .BILINEAR)
 
 	rl.SetMaterialTexture(&game.assets.box_model.materials[1], .ALBEDO, material_texture)
-	rl.SetMaterialTexture(&game.assets.wall_model.materials[1], .ALBEDO, material_texture)
+	// rl.SetMaterialTexture(&game.assets.wall_model.materials[1], .ALBEDO, material_texture)
 	rl.SetMaterialTexture(&game.assets.player_model.materials[1], .ALBEDO, material_texture)
 	rl.SetMaterialTexture(&game.assets.grass_model.materials[1], .ALBEDO, material_texture)
+	rl.SetMaterialTexture(&game.assets.door_model.materials[1], .ALBEDO, material_texture)
 
 	if os.exists("../world.json") {
 		load_game_from_file(&game, "../world.json")
@@ -71,7 +72,7 @@ main :: proc() {
 		rl.UpdateModelAnimation(game.assets.player_model, player_animations[0], animation_frame)
 
 		rl.BeginDrawing()
-		rl.ClearBackground(rl.RAYWHITE)
+		rl.ClearBackground(BACKGROUND_COLOR)
 		rl.BeginMode3D(game.camera)
 		rl.DrawModelEx(
 			game.assets.player_model,
@@ -100,10 +101,6 @@ main :: proc() {
 		} else if game.status == .Win {
 			rl.DrawText("Dude, you fucking won!!!!!", 4, 4, 60, rl.RED)
 		}
-
-		game_status_str := fmt.ctprint("Game Status: ", game.status)
-		rl.DrawText(game_status_str, 4, 4, 20, rl.RED)
-
 
 		if game.editor.active {
 			draw_editor(&game, font)

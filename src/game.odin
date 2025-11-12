@@ -6,6 +6,7 @@ import rl "vendor:raylib"
 ENTITY_SPEED :: 20
 CAMERA_OFFSET :: Vec3{0, 8, 6}
 FONT_SIZE :: 30
+BACKGROUND_COLOR :: rl.Color{46, 34, 47, 255}
 
 Vec3 :: [3]f32
 Vec2 :: [2]f32
@@ -90,20 +91,26 @@ enemies_turn :: proc(using game: ^Game) {
 	for &entity in entities {
 		if entity.type == .Enemy {
 			direction_vector := player.pos - entity.pos
-			move_vector: Vec3i
+			primary_move, secondary_move: Vec3i
 
 			if rl.Vector3Length(direction_vector) <= 1 {
 				// Attack player
 				status = .Lose
-			}
-
-			if abs(direction_vector.x) > abs(direction_vector.z) {
-				move_vector.x = i32(math.sign(direction_vector.x))
 			} else {
-				move_vector.z = i32(math.sign(direction_vector.z))
-			}
+				// Move
+				if abs(direction_vector.x) > abs(direction_vector.z) {
+					primary_move.x = i32(math.sign(direction_vector.x))
+					secondary_move.z = i32(math.sign(direction_vector.z))
+				} else {
+					primary_move.z = i32(math.sign(direction_vector.z))
+					secondary_move.x = i32(math.sign(direction_vector.x))
+				}
 
-			try_move(&entity, move_vector, game)
+				if !try_move(&entity, primary_move, game) {
+					// try move to other dir
+					try_move(&entity, secondary_move, game)
+				}
+			}
 		}
 	}
 	turn = .Player
@@ -119,10 +126,10 @@ update_game :: proc(using game: ^Game, dt: f32) {
 		}
 	}
 
-	update_entity(&player, dt)
+	update_entity(&player, game, dt)
 
 	for &entity in entities {
-		update_entity(&entity, dt)
+		update_entity(&entity, game, dt)
 	}
 
 	camera_follow(&camera, &player, CAMERA_OFFSET)

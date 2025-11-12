@@ -11,6 +11,7 @@ Entity :: struct {
 	is_solid:        bool,
 	is_pushable:     bool,
 	is_interactable: bool,
+	gravity:         bool,
 	type:            EntityType,
 }
 
@@ -36,6 +37,7 @@ create_entity :: proc(type: EntityType, pos: Vec3i) -> Entity {
 	case .Box:
 		is_solid = true
 		is_pushable = true
+		gravity = true
 	case .Grass:
 		is_solid = true
 	case .Enemy:
@@ -48,12 +50,22 @@ create_entity :: proc(type: EntityType, pos: Vec3i) -> Entity {
 	return entity
 }
 
-update_entity :: proc(using entity: ^Entity, dt: f32) {
+update_entity :: proc(using entity: ^Entity, game: ^Game, dt: f32) {
 	pos = linalg.lerp(pos, vec3i_to_vec3(target_pos), dt * ENTITY_SPEED)
 	distance_to_target := linalg.length(vec3i_to_vec3(target_pos) - pos)
 
 	if distance_to_target < 0.1 {
 		pos = vec3i_to_vec3(target_pos)
 		is_moving = false
+	}
+
+	if gravity {
+		pos_below := target_pos - {0, 1, 0}
+		if entity_below, _ := get_entity_at_pos(pos_below, game); entity_below == nil {
+			// TODO: try_move only takes a relative position, maybe it should take a absolute one?
+			// try_move(entity, pos_below, game)
+
+			target_pos = pos_below
+		}
 	}
 }
