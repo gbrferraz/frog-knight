@@ -64,7 +64,7 @@ update_editor :: proc(using game: ^Game) {
 		append(&game.entities, new_entity)
 	}
 
-	if rl.IsMouseButtonDown(.MIDDLE) {
+	if rl.IsMouseButtonDown(.MIDDLE) || rl.IsKeyDown(.X) {
 		if entity_index != -1 {
 			unordered_remove(&game.entities, entity_index)
 		}
