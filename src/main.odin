@@ -4,9 +4,8 @@ import "core:os"
 import rl "vendor:raylib"
 
 main :: proc() {
-	rl.SetConfigFlags({.MSAA_4X_HINT, .WINDOW_RESIZABLE})
+	rl.SetConfigFlags({.MSAA_4X_HINT, .WINDOW_RESIZABLE, .VSYNC_HINT})
 	rl.InitWindow(1280, 720, "Frog Knight")
-	rl.SetTargetFPS(60)
 
 	font := rl.LoadFontEx("../res/fonts/AtkinsonHyperlegibleNext-Regular.ttf", FONT_SIZE, nil, 0)
 	rl.GuiSetFont(font)
@@ -24,11 +23,10 @@ main :: proc() {
 			door_model = rl.LoadModel("../res/models/door.glb"),
 		},
 		turn = .Player,
-		///editor = {active = true},
+		// editor = {active = true},
 	}
 
 	animation_frame: i32
-
 	animation_count: i32
 	player_animations := rl.LoadModelAnimations("../res/models/player.glb", &animation_count)
 
@@ -108,6 +106,5 @@ main :: proc() {
 
 		rl.EndDrawing()
 	}
-
 	rl.CloseWindow()
 }

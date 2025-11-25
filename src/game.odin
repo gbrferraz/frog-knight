@@ -87,9 +87,12 @@ move_player :: proc(using game: ^Game) {
 	}
 }
 
-enemies_turn :: proc(using game: ^Game) {
+enemy_turn :: proc(using game: ^Game) {
 	for &entity in entities {
 		if entity.type == .Enemy {
+
+			if !can_see(entity, player, game) {continue}
+
 			direction_vector := player.pos - entity.pos
 			primary_move, secondary_move: Vec3i
 
@@ -116,13 +119,55 @@ enemies_turn :: proc(using game: ^Game) {
 	turn = .Player
 }
 
+can_see :: proc(seeker: Entity, target: Entity, game: ^Game) -> bool {
+	if seeker.target_pos.y != target.target_pos.y {return false}
+
+	start_index, end_index: i32
+
+	if seeker.target_pos.x == target.target_pos.x {
+		if seeker.target_pos.z < target.target_pos.z {
+			start_index = seeker.target_pos.z + 1
+			end_index = target.target_pos.z
+		} else {
+			start_index = target.target_pos.z + 1
+			end_index = seeker.target_pos.z
+		}
+
+		for i in start_index ..< end_index {
+			entity, _ := get_entity_at_pos({seeker.target_pos.x, seeker.target_pos.y, i}, game)
+			if entity != nil && entity.is_solid {
+				return false
+			}
+		}
+		return true
+	} else if seeker.target_pos.z == target.target_pos.z {
+		if seeker.target_pos.x < target.target_pos.x {
+			start_index = seeker.target_pos.x + 1
+			end_index = target.target_pos.x
+		} else {
+			start_index = target.target_pos.x + 1
+			end_index = seeker.target_pos.x
+		}
+
+		for i in start_index ..< end_index {
+			entity, _ := get_entity_at_pos({i, seeker.target_pos.y, seeker.target_pos.z}, game)
+			if entity != nil && entity.is_solid {
+				return false
+			}
+		}
+		return true
+	}
+
+	return false
+}
+
 update_game :: proc(using game: ^Game, dt: f32) {
 	if !are_any_entities_moving(game) {
 		switch turn {
 		case .Player:
 			move_player(game)
 		case .Enemy:
-			enemies_turn(game)
+			enemy_turn(game)
 		}
 	}
 

@@ -42,6 +42,7 @@ create_entity :: proc(type: EntityType, pos: Vec3i) -> Entity {
 		is_solid = true
 	case .Enemy:
 		is_solid = true
+		gravity = true
 	case .Door:
 		is_solid = true
 		is_interactable = true
